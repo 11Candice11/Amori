@@ -1,6 +1,9 @@
 using Amori.Api.Common.Extensions;
 using Amori.Api.Common.Middleware;
 using Amori.Api.Configuration;
+using Amori.Api.Data.Context;
+using Amori.Api.Data.Seed;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +52,14 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/api/healthz");
+
+// ── Auto-migrate and seed ─────────────────────────────────────────────────────
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AmoriDbContext>();
+    await db.Database.MigrateAsync();
+    await AmoriDbSeeder.SeedAsync(db);
+}
 
 app.Run();
 

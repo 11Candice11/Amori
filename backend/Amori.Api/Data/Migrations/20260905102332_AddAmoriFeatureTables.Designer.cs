@@ -5,6 +5,7 @@ using Amori.Api.Data.Context;
 using Amori.Api.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -13,9 +14,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Amori.Api.Data.Migrations
 {
     [DbContext(typeof(AmoriDbContext))]
-    partial class AmoriDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260905102332_AddAmoriFeatureTables")]
+    partial class AddAmoriFeatureTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
