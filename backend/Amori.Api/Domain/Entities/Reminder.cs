@@ -18,4 +18,5 @@ public sealed class Reminder : BaseEntity
 
     // Navigation
     public User User { get; set; } = null!;
+    public ICollection<ReminderCompletion> Completions { get; set; } = [];
 }

@@ -20,4 +20,5 @@ public sealed class SplittingSession : BaseEntity
     // Navigation
     public User User { get; set; } = null!;
     public Relationship Relationship { get; set; } = null!;
+    public ICollection<SplittingAnswer> Answers { get; set; } = [];
 }

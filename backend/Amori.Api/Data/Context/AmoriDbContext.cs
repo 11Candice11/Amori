@@ -74,6 +74,30 @@ public sealed class AmoriDbContext(DbContextOptions<AmoriDbContext> options) : D
     // Games (Distraction Centre)
     public DbSet<Game> Games => Set<Game>();
     public DbSet<GameSession> GameSessions => Set<GameSession>();
+    public DbSet<GameScore> GameScores => Set<GameScore>();
+
+    // Quiz
+    public DbSet<QuizQuestion> QuizQuestions => Set<QuizQuestion>();
+    public DbSet<QuizAnswer> QuizAnswers => Set<QuizAnswer>();
+    public DbSet<QuizSession> QuizSessions => Set<QuizSession>();
+
+    // Would You Rather
+    public DbSet<WouldYouRatherQuestion> WouldYouRatherQuestions => Set<WouldYouRatherQuestion>();
+    public DbSet<WouldYouRatherAnswer> WouldYouRatherAnswers => Set<WouldYouRatherAnswer>();
+
+    // Splitting Guided Questions
+    public DbSet<SplittingQuestion> SplittingQuestions => Set<SplittingQuestion>();
+    public DbSet<SplittingAnswer> SplittingAnswers => Set<SplittingAnswer>();
+
+    // Reminder Completions
+    public DbSet<ReminderCompletion> ReminderCompletions => Set<ReminderCompletion>();
+
+    // Auth
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<UserSettings> UserSettings => Set<UserSettings>();
+
+    // Relationship Invitations
+    public DbSet<RelationshipInvitation> RelationshipInvitations => Set<RelationshipInvitation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

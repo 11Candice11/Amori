@@ -17,8 +17,28 @@
       "name": "Base Environment",
       "data": {
         "base_url": "http://localhost:5000",
-        "access_token": ""
+        "access_token": "",
+        "relationship_id": "",
+        "item_id": ""
       }
+    },
+
+    {
+      "_id": "fld_health",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Health",
+      "description": "No auth required"
+    },
+    {
+      "_id": "req_health",
+      "_type": "request",
+      "parentId": "fld_health",
+      "name": "Health Check",
+      "method": "GET",
+      "url": "{{ base_url }}/api/healthz",
+      "headers": [],
+      "description": "Returns 200 OK if the API is running."
     },
 
     {
@@ -42,7 +62,7 @@
       "headers": [
         { "name": "Content-Type", "value": "application/json" }
       ],
-      "description": "Creates a new user account. Returns accessToken + user object.\n\nRequired fields:\n- name (string)\n- email (string)\n- password (string, min 8 chars)"
+      "description": "Creates a new user account. Returns accessToken + user object.\n\nCopy the accessToken into the 'access_token' environment variable."
     },
     {
       "_id": "req_login",
@@ -58,7 +78,7 @@
       "headers": [
         { "name": "Content-Type", "value": "application/json" }
       ],
-      "description": "Authenticates an existing user. Returns accessToken + user object.\n\nCopy the accessToken value into the 'access_token' environment variable to use protected endpoints."
+      "description": "Authenticates an existing user. Returns accessToken + user object.\n\nCopy the accessToken into the 'access_token' environment variable."
     },
 
     {
@@ -78,7 +98,7 @@
       "headers": [
         { "name": "Authorization", "value": "Bearer {{ access_token }}" }
       ],
-      "description": "Returns the profile of the currently authenticated user.\n\nReturns: { id, name, email }"
+      "description": "Returns the profile of the currently authenticated user."
     },
 
     {
@@ -103,7 +123,7 @@
         { "name": "Content-Type", "value": "application/json" },
         { "name": "Authorization", "value": "Bearer {{ access_token }}" }
       ],
-      "description": "Creates a new relationship for the current user. The user becomes the first member.\n\nRequired fields:\n- startDate (string, ISO 8601 date: YYYY-MM-DD)\n\nReturns: { id, startDate, isActive, members[] }"
+      "description": "Creates a new relationship for the current user. The user becomes the first member."
     },
     {
       "_id": "req_get_my_relationship",
@@ -115,7 +135,7 @@
       "headers": [
         { "name": "Authorization", "value": "Bearer {{ access_token }}" }
       ],
-      "description": "Returns the relationship the current user belongs to.\n\nReturns: { id, startDate, isActive, members[] }"
+      "description": "Returns the relationship the current user belongs to."
     },
     {
       "_id": "req_join_relationship",
@@ -123,7 +143,7 @@
       "parentId": "fld_relationships",
       "name": "Join Relationship",
       "method": "POST",
-      "url": "{{ base_url }}/api/relationships/RELATIONSHIP_ID_HERE/join",
+      "url": "{{ base_url }}/api/relationships/{{ relationship_id }}/join",
       "body": {
         "mimeType": "application/json",
         "text": ""
@@ -131,25 +151,2165 @@
       "headers": [
         { "name": "Authorization", "value": "Bearer {{ access_token }}" }
       ],
-      "description": "Joins an existing relationship by ID. Max 2 members per relationship.\n\nReplace RELATIONSHIP_ID_HERE in the URL with the target relationship's UUID.\n\nReturns: { id, startDate, isActive, members[] }"
+      "description": "Joins an existing relationship by ID. Max 2 members. Set relationship_id in environment."
     },
 
     {
-      "_id": "fld_health",
+      "_id": "fld_incidents",
       "_type": "request_group",
       "parentId": "wrk_amori",
-      "name": "Health",
-      "description": "No auth required"
+      "name": "Incidents",
+      "description": "Relationship incident management. Requires Bearer token."
     },
     {
-      "_id": "req_health",
+      "_id": "req_incidents_list",
       "_type": "request",
-      "parentId": "fld_health",
-      "name": "Health Check",
+      "parentId": "fld_incidents",
+      "name": "List Incidents",
       "method": "GET",
-      "url": "{{ base_url }}/api/healthz",
-      "headers": [],
-      "description": "Returns 200 OK if the API is running."
+      "url": "{{ base_url }}/api/incidents?page=1&pageSize=20",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "List incidents for the authenticated user's relationship.\n\nQuery params: status, category, priority, impact, urgency, reportedByMe, assignedToMe, openOnly, overdue, page, pageSize"
+    },
+    {
+      "_id": "req_incidents_summary",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Get Summary Stats",
+      "method": "GET",
+      "url": "{{ base_url }}/api/incidents/summary",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Relationship-level incident statistics."
+    },
+    {
+      "_id": "req_incidents_create",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Create Incident",
+      "method": "POST",
+      "url": "{{ base_url }}/api/incidents",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"We need to talk about communication\",\n  \"description\": \"I feel like we've been struggling to connect lately.\",\n  \"category\": 0,\n  \"subCategory\": \"Communication\",\n  \"impact\": 1,\n  \"urgency\": 1\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Create a new incident.\n\ncategory: enum IncidentCategory\nimpact: enum IncidentImpact\nurgency: enum IncidentUrgency"
+    },
+    {
+      "_id": "req_incidents_get",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Get Incident by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get full detail for a single incident."
+    },
+    {
+      "_id": "req_incidents_update",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Update Incident",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Updated title\",\n  \"description\": \"Updated description\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update editable fields: title, description, category, impact, urgency."
+    },
+    {
+      "_id": "req_incidents_assign",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Assign Incident",
+      "method": "POST",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/assign",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"assignedToUserId\": \"00000000-0000-0000-0000-000000000000\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Assign the incident to the partner. Sets status to ASSIGNED."
+    },
+    {
+      "_id": "req_incidents_investigate",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Start Investigation",
+      "method": "POST",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/investigate",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Begin investigation. Sets status to INVESTIGATING."
+    },
+    {
+      "_id": "req_incidents_awaiting",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Awaiting Response",
+      "method": "POST",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/awaiting-response",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Mark incident as awaiting a response from the partner."
+    },
+    {
+      "_id": "req_incidents_resolve",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Resolve Incident",
+      "method": "POST",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/resolve",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"resolution\": \"We had a calm conversation and reached an understanding.\",\n  \"resolutionNotes\": \"Will check in again next week.\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Resolve the incident with a resolution summary."
+    },
+    {
+      "_id": "req_incidents_close",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Close Incident",
+      "method": "POST",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/close",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"closureNotes\": \"Resolution accepted by both parties.\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Close the incident. Resolution accepted and documented."
+    },
+    {
+      "_id": "req_incidents_reopen",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Reopen Incident",
+      "method": "POST",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/reopen",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"reason\": \"Issue resurfaced after initial resolution.\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Reopen a closed or resolved incident."
+    },
+    {
+      "_id": "req_incidents_notes_get",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Get Notes",
+      "method": "GET",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/notes",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get all investigation notes for an incident."
+    },
+    {
+      "_id": "req_incidents_notes_add",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Add Note",
+      "method": "POST",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/notes",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"content\": \"I noticed this pattern started after our trip.\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Add an investigation note to an incident."
+    },
+    {
+      "_id": "req_incidents_notes_update",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Update Note",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/notes/NOTE_ID_HERE",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"content\": \"Updated note content.\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update an investigation note (author only). Replace NOTE_ID_HERE."
+    },
+    {
+      "_id": "req_incidents_notes_delete",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Delete Note",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/notes/NOTE_ID_HERE",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Delete an investigation note (author only). Replace NOTE_ID_HERE."
+    },
+    {
+      "_id": "req_incidents_responses_get",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Get Responses",
+      "method": "GET",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/responses",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get all responses to an incident."
+    },
+    {
+      "_id": "req_incidents_responses_add",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Add Response",
+      "method": "POST",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/responses",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"message\": \"I hear you. I'd like to work through this together.\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Add a response to an incident."
+    },
+    {
+      "_id": "req_incidents_responses_update",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Update Response",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/responses/RESPONSE_ID_HERE",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"message\": \"Updated response.\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update a response (author only). Replace RESPONSE_ID_HERE."
+    },
+    {
+      "_id": "req_incidents_responses_delete",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Delete Response",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/responses/RESPONSE_ID_HERE",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Delete a response (author only). Replace RESPONSE_ID_HERE."
+    },
+    {
+      "_id": "req_incidents_history",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Get History",
+      "method": "GET",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/history",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get the append-only audit history for an incident."
+    },
+    {
+      "_id": "req_incidents_sla",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Get SLA",
+      "method": "GET",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/sla",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get SLA countdown information for an incident."
+    },
+    {
+      "_id": "req_incidents_review",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Add Review (PIR)",
+      "method": "POST",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/review",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"whatWentWell\": \"We communicated calmly.\",\n  \"whatCouldImprove\": \"Respond sooner next time.\",\n  \"futureAction\": \"Schedule weekly check-ins.\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Add a post-implementation review. Only available after resolved/closed."
+    },
+    {
+      "_id": "req_incidents_lessons_get",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Get Lessons Learned",
+      "method": "GET",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/lessons",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get all lessons learned for an incident."
+    },
+    {
+      "_id": "req_incidents_lessons_add",
+      "_type": "request",
+      "parentId": "fld_incidents",
+      "name": "Add Lesson Learned",
+      "method": "POST",
+      "url": "{{ base_url }}/api/incidents/{{ item_id }}/lessons",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"lesson\": \"We need to address issues before they escalate.\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Record a lesson learned for an incident."
+    },
+
+    {
+      "_id": "fld_tickets",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Relationship Tickets (Let's Chat)",
+      "description": "Communication ticket system. Requires Bearer token."
+    },
+    {
+      "_id": "req_tickets_list",
+      "_type": "request",
+      "parentId": "fld_tickets",
+      "name": "List Tickets",
+      "method": "GET",
+      "url": "{{ base_url }}/api/tickets",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "List all tickets. Optional query: ?status=0 (Open=0, Acknowledged=1, InProgress=2, Resolved=3, Closed=4)"
+    },
+    {
+      "_id": "req_tickets_get",
+      "_type": "request",
+      "parentId": "fld_tickets",
+      "name": "Get Ticket by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/tickets/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a single ticket with all responses."
+    },
+    {
+      "_id": "req_tickets_create",
+      "_type": "request",
+      "parentId": "fld_tickets",
+      "name": "Create Ticket",
+      "method": "POST",
+      "url": "{{ base_url }}/api/tickets",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"subject\": \"I need more quality time together\",\n  \"category\": 0,\n  \"severity\": 1,\n  \"description\": \"I've been feeling disconnected lately.\",\n  \"feelings\": \"Lonely and a bit unseen.\",\n  \"whatHappened\": \"We've both been busy and haven't had a proper date in weeks.\",\n  \"whatINeed\": \"A dedicated date night each week.\",\n  \"whatIPreferInFuture\": \"Let's plan ahead so we both have something to look forward to.\",\n  \"additionalNotes\": null\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Create a new ticket. category: enum TicketCategory. severity: Low=0, Medium=1, High=2, Critical=3."
+    },
+    {
+      "_id": "req_tickets_update",
+      "_type": "request",
+      "parentId": "fld_tickets",
+      "name": "Update Ticket",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/tickets/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"subject\": \"Updated subject\",\n  \"feelings\": \"Updated feelings\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update a ticket (creator only)."
+    },
+    {
+      "_id": "req_tickets_delete",
+      "_type": "request",
+      "parentId": "fld_tickets",
+      "name": "Delete Ticket",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/tickets/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Delete a ticket (creator only)."
+    },
+    {
+      "_id": "req_tickets_acknowledge",
+      "_type": "request",
+      "parentId": "fld_tickets",
+      "name": "Acknowledge Ticket",
+      "method": "POST",
+      "url": "{{ base_url }}/api/tickets/{{ item_id }}/acknowledge",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Acknowledge a ticket. Sets status to Acknowledged."
+    },
+    {
+      "_id": "req_tickets_assign",
+      "_type": "request",
+      "parentId": "fld_tickets",
+      "name": "Assign Ticket",
+      "method": "POST",
+      "url": "{{ base_url }}/api/tickets/{{ item_id }}/assign",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"assignedToUserId\": \"00000000-0000-0000-0000-000000000000\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Assign a ticket to a relationship member. Sets status to InProgress."
+    },
+    {
+      "_id": "req_tickets_respond",
+      "_type": "request",
+      "parentId": "fld_tickets",
+      "name": "Respond to Ticket",
+      "method": "POST",
+      "url": "{{ base_url }}/api/tickets/{{ item_id }}/respond",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"content\": \"Thank you for raising this. I'd love to plan a date night this Friday.\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Add a response to a ticket."
+    },
+    {
+      "_id": "req_tickets_responses",
+      "_type": "request",
+      "parentId": "fld_tickets",
+      "name": "Get Responses",
+      "method": "GET",
+      "url": "{{ base_url }}/api/tickets/{{ item_id }}/responses",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get all responses for a ticket."
+    },
+    {
+      "_id": "req_tickets_status",
+      "_type": "request",
+      "parentId": "fld_tickets",
+      "name": "Set Status",
+      "method": "POST",
+      "url": "{{ base_url }}/api/tickets/{{ item_id }}/status",
+      "body": {
+        "mimeType": "application/json",
+        "text": "2"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Set the ticket status directly. Send integer: Open=0, Acknowledged=1, InProgress=2, Resolved=3, Closed=4."
+    },
+    {
+      "_id": "req_tickets_resolve",
+      "_type": "request",
+      "parentId": "fld_tickets",
+      "name": "Resolve Ticket",
+      "method": "POST",
+      "url": "{{ base_url }}/api/tickets/{{ item_id }}/resolve",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Resolve a ticket. Sets status to Resolved."
+    },
+    {
+      "_id": "req_tickets_reopen",
+      "_type": "request",
+      "parentId": "fld_tickets",
+      "name": "Reopen Ticket",
+      "method": "POST",
+      "url": "{{ base_url }}/api/tickets/{{ item_id }}/reopen",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Reopen a resolved ticket."
+    },
+
+    {
+      "_id": "fld_mood",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Mood",
+      "description": "Mood check-in tracking. Requires Bearer token."
+    },
+    {
+      "_id": "req_mood_checkins_list",
+      "_type": "request",
+      "parentId": "fld_mood",
+      "name": "List Check-ins",
+      "method": "GET",
+      "url": "{{ base_url }}/api/moods/check-ins",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "List all mood check-ins for the authenticated user."
+    },
+    {
+      "_id": "req_mood_current",
+      "_type": "request",
+      "parentId": "fld_mood",
+      "name": "Get Current Mood",
+      "method": "GET",
+      "url": "{{ base_url }}/api/moods/current",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get the user's most recent check-in."
+    },
+    {
+      "_id": "req_mood_history",
+      "_type": "request",
+      "parentId": "fld_mood",
+      "name": "Get History (30 days)",
+      "method": "GET",
+      "url": "{{ base_url }}/api/moods/history",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get mood history for the last 30 days."
+    },
+    {
+      "_id": "req_mood_summary",
+      "_type": "request",
+      "parentId": "fld_mood",
+      "name": "Get Summary",
+      "method": "GET",
+      "url": "{{ base_url }}/api/moods/summary",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get mood statistics for the last 30 days."
+    },
+    {
+      "_id": "req_mood_create",
+      "_type": "request",
+      "parentId": "fld_mood",
+      "name": "Create Check-in",
+      "method": "POST",
+      "url": "{{ base_url }}/api/moods/check-ins",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"checkInType\": 0,\n  \"mood\": 1,\n  \"intensity\": 6,\n  \"whatHappened\": \"Had a disagreement this morning.\",\n  \"feelings\": \"Frustrated and a bit sad.\",\n  \"perceivedCause\": \"We didn't have time to resolve it before work.\",\n  \"whatINeed\": \"A hug and some reassurance.\",\n  \"isSharedWithPartner\": true\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Create a mood check-in. checkInType: AdHoc=0, Scheduled=1. mood: enum MoodType. intensity: 1-10."
+    },
+    {
+      "_id": "req_mood_get",
+      "_type": "request",
+      "parentId": "fld_mood",
+      "name": "Get Check-in by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/moods/check-ins/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a single check-in by ID."
+    },
+    {
+      "_id": "req_mood_update",
+      "_type": "request",
+      "parentId": "fld_mood",
+      "name": "Update Check-in",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/moods/check-ins/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"intensity\": 4,\n  \"isSharedWithPartner\": false\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update a check-in."
+    },
+    {
+      "_id": "req_mood_delete",
+      "_type": "request",
+      "parentId": "fld_mood",
+      "name": "Delete Check-in",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/moods/check-ins/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Delete a check-in."
+    },
+    {
+      "_id": "req_mood_share",
+      "_type": "request",
+      "parentId": "fld_mood",
+      "name": "Share Check-in",
+      "method": "POST",
+      "url": "{{ base_url }}/api/moods/check-ins/{{ item_id }}/share",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Share a check-in with partner."
+    },
+    {
+      "_id": "req_mood_unshare",
+      "_type": "request",
+      "parentId": "fld_mood",
+      "name": "Unshare Check-in",
+      "method": "POST",
+      "url": "{{ base_url }}/api/moods/check-ins/{{ item_id }}/unshare",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Unshare a check-in from partner."
+    },
+
+    {
+      "_id": "fld_splitting",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Splitting (Grounding)",
+      "description": "Emotional grounding flow. Requires Bearer token."
+    },
+    {
+      "_id": "req_splitting_list",
+      "_type": "request",
+      "parentId": "fld_splitting",
+      "name": "List Sessions",
+      "method": "GET",
+      "url": "{{ base_url }}/api/splitting/sessions",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "List all splitting sessions for the authenticated user."
+    },
+    {
+      "_id": "req_splitting_create",
+      "_type": "request",
+      "parentId": "fld_splitting",
+      "name": "Start Session",
+      "method": "POST",
+      "url": "{{ base_url }}/api/splitting/sessions",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"feelingsSelected\": [\"Anxious\", \"Overwhelmed\"],\n  \"trigger\": \"Argument about chores\",\n  \"description\": \"I feel like I'm shutting down and can't think clearly.\",\n  \"whatINeed\": \"Space and grounding exercises\",\n  \"initialMood\": 3\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Start a splitting/grounding session. initialMood: enum MoodType."
+    },
+    {
+      "_id": "req_splitting_get",
+      "_type": "request",
+      "parentId": "fld_splitting",
+      "name": "Get Session by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/splitting/sessions/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a splitting session by ID."
+    },
+    {
+      "_id": "req_splitting_update",
+      "_type": "request",
+      "parentId": "fld_splitting",
+      "name": "Update Session",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/splitting/sessions/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"description\": \"Feeling a bit calmer after breathing exercises.\",\n  \"actionsTaken\": [0]\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update an in-progress session."
+    },
+    {
+      "_id": "req_splitting_complete",
+      "_type": "request",
+      "parentId": "fld_splitting",
+      "name": "Complete Session",
+      "method": "POST",
+      "url": "{{ base_url }}/api/splitting/sessions/{{ item_id }}/complete",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"finalMood\": 0,\n  \"actionsTaken\": [0, 2]\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Complete a splitting session."
+    },
+    {
+      "_id": "req_splitting_cancel",
+      "_type": "request",
+      "parentId": "fld_splitting",
+      "name": "Cancel Session",
+      "method": "POST",
+      "url": "{{ base_url }}/api/splitting/sessions/{{ item_id }}/cancel",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Cancel an in-progress splitting session."
+    },
+
+    {
+      "_id": "fld_emergency",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Emergency (Support Requests)",
+      "description": "I'm-not-okay support flow. Requires Bearer token."
+    },
+    {
+      "_id": "req_emergency_list",
+      "_type": "request",
+      "parentId": "fld_emergency",
+      "name": "List Requests",
+      "method": "GET",
+      "url": "{{ base_url }}/api/emergency/requests",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "List all support requests for the relationship."
+    },
+    {
+      "_id": "req_emergency_create",
+      "_type": "request",
+      "parentId": "fld_emergency",
+      "name": "Create Request",
+      "method": "POST",
+      "url": "{{ base_url }}/api/emergency/requests",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"type\": 0,\n  \"message\": \"I'm really struggling right now and need your support.\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Create a support / I'm-not-okay request. type: enum EmergencyRequestType."
+    },
+    {
+      "_id": "req_emergency_get",
+      "_type": "request",
+      "parentId": "fld_emergency",
+      "name": "Get Request by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/emergency/requests/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a single support request."
+    },
+    {
+      "_id": "req_emergency_update",
+      "_type": "request",
+      "parentId": "fld_emergency",
+      "name": "Update Request",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/emergency/requests/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"message\": \"Updated message with more context.\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update the message on an active request (sender only)."
+    },
+    {
+      "_id": "req_emergency_acknowledge",
+      "_type": "request",
+      "parentId": "fld_emergency",
+      "name": "Acknowledge Request",
+      "method": "POST",
+      "url": "{{ base_url }}/api/emergency/requests/{{ item_id }}/acknowledge",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Acknowledge a support request (recipient only)."
+    },
+    {
+      "_id": "req_emergency_resolve",
+      "_type": "request",
+      "parentId": "fld_emergency",
+      "name": "Resolve Request",
+      "method": "POST",
+      "url": "{{ base_url }}/api/emergency/requests/{{ item_id }}/resolve",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Resolve a support request."
+    },
+    {
+      "_id": "req_emergency_cancel",
+      "_type": "request",
+      "parentId": "fld_emergency",
+      "name": "Cancel Request",
+      "method": "POST",
+      "url": "{{ base_url }}/api/emergency/requests/{{ item_id }}/cancel",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Cancel a support request (sender only)."
+    },
+
+    {
+      "_id": "fld_hugs",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Hugs",
+      "description": "Virtual hugs between partners. Requires Bearer token."
+    },
+    {
+      "_id": "req_hugs_list",
+      "_type": "request",
+      "parentId": "fld_hugs",
+      "name": "Get All Hugs",
+      "method": "GET",
+      "url": "{{ base_url }}/api/hugs",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get all hugs for the authenticated user's relationship."
+    },
+    {
+      "_id": "req_hugs_send",
+      "_type": "request",
+      "parentId": "fld_hugs",
+      "name": "Send Hug",
+      "method": "POST",
+      "url": "{{ base_url }}/api/hugs",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Send a virtual hug to your partner. No body required."
+    },
+    {
+      "_id": "req_hugs_get",
+      "_type": "request",
+      "parentId": "fld_hugs",
+      "name": "Get Hug by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/hugs/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a hug by ID."
+    },
+    {
+      "_id": "req_hugs_acknowledge",
+      "_type": "request",
+      "parentId": "fld_hugs",
+      "name": "Acknowledge Hug",
+      "method": "POST",
+      "url": "{{ base_url }}/api/hugs/{{ item_id }}/acknowledge",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Acknowledge a received hug (recipient only)."
+    },
+
+    {
+      "_id": "fld_messages",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Messages",
+      "description": "Partner messaging. Requires Bearer token."
+    },
+    {
+      "_id": "req_messages_list",
+      "_type": "request",
+      "parentId": "fld_messages",
+      "name": "List Messages",
+      "method": "GET",
+      "url": "{{ base_url }}/api/messages",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "List all messages in the relationship."
+    },
+    {
+      "_id": "req_messages_send",
+      "_type": "request",
+      "parentId": "fld_messages",
+      "name": "Send Message",
+      "method": "POST",
+      "url": "{{ base_url }}/api/messages",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"text\": \"Hey, thinking of you! 💕\",\n  \"imageKey\": null,\n  \"voiceNoteKey\": null,\n  \"category\": 0\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Send a message to your partner. Must include text, imageKey, or voiceNoteKey. category: enum MessageCategory."
+    },
+    {
+      "_id": "req_messages_get",
+      "_type": "request",
+      "parentId": "fld_messages",
+      "name": "Get Message by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/messages/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a single message."
+    },
+    {
+      "_id": "req_messages_update",
+      "_type": "request",
+      "parentId": "fld_messages",
+      "name": "Update Message",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/messages/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"text\": \"Updated message text\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update a message (sender only)."
+    },
+    {
+      "_id": "req_messages_delete",
+      "_type": "request",
+      "parentId": "fld_messages",
+      "name": "Delete Message",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/messages/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Soft-delete a message (sender only)."
+    },
+    {
+      "_id": "req_messages_read",
+      "_type": "request",
+      "parentId": "fld_messages",
+      "name": "Mark as Read",
+      "method": "POST",
+      "url": "{{ base_url }}/api/messages/{{ item_id }}/read",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Mark a message as read (recipient only)."
+    },
+    {
+      "_id": "req_messages_favorite",
+      "_type": "request",
+      "parentId": "fld_messages",
+      "name": "Favorite Message",
+      "method": "POST",
+      "url": "{{ base_url }}/api/messages/{{ item_id }}/favorite",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Favorite a message."
+    },
+    {
+      "_id": "req_messages_unfavorite",
+      "_type": "request",
+      "parentId": "fld_messages",
+      "name": "Unfavorite Message",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/messages/{{ item_id }}/favorite",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Unfavorite a message."
+    },
+
+    {
+      "_id": "fld_memories",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Memories",
+      "description": "Shared memories with photo/media support. Requires Bearer token."
+    },
+    {
+      "_id": "req_memories_list",
+      "_type": "request",
+      "parentId": "fld_memories",
+      "name": "List Memories",
+      "method": "GET",
+      "url": "{{ base_url }}/api/memories",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "List all memories for the relationship."
+    },
+    {
+      "_id": "req_memories_create",
+      "_type": "request",
+      "parentId": "fld_memories",
+      "name": "Create Memory",
+      "method": "POST",
+      "url": "{{ base_url }}/api/memories",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Our first trip to Paris\",\n  \"description\": \"We stayed near the Eiffel Tower and it was magical.\",\n  \"memoryDate\": \"2023-06-15\",\n  \"location\": \"Paris, France\",\n  \"latitude\": 48.8566,\n  \"longitude\": 2.3522,\n  \"tags\": [\"travel\", \"anniversary\"]\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Create a new memory."
+    },
+    {
+      "_id": "req_memories_get",
+      "_type": "request",
+      "parentId": "fld_memories",
+      "name": "Get Memory by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/memories/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a single memory."
+    },
+    {
+      "_id": "req_memories_update",
+      "_type": "request",
+      "parentId": "fld_memories",
+      "name": "Update Memory",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/memories/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Updated title\",\n  \"tags\": [\"travel\", \"romance\"]\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update a memory (creator only)."
+    },
+    {
+      "_id": "req_memories_delete",
+      "_type": "request",
+      "parentId": "fld_memories",
+      "name": "Delete Memory",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/memories/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Soft-delete a memory (creator only)."
+    },
+    {
+      "_id": "req_memories_favorite",
+      "_type": "request",
+      "parentId": "fld_memories",
+      "name": "Favorite Memory",
+      "method": "POST",
+      "url": "{{ base_url }}/api/memories/{{ item_id }}/favorite",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Mark a memory as favorite."
+    },
+    {
+      "_id": "req_memories_unfavorite",
+      "_type": "request",
+      "parentId": "fld_memories",
+      "name": "Unfavorite Memory",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/memories/{{ item_id }}/favorite",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Remove favorite from a memory."
+    },
+    {
+      "_id": "req_memories_add_media",
+      "_type": "request",
+      "parentId": "fld_memories",
+      "name": "Add Media",
+      "method": "POST",
+      "url": "{{ base_url }}/api/memories/{{ item_id }}/media",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"fileKey\": \"memories/abc123.jpg\",\n  \"mediaType\": 0,\n  \"durationSeconds\": null\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Add media to a memory (file must already be in S3). mediaType: Photo=0, Video=1, VoiceNote=2."
+    },
+    {
+      "_id": "req_memories_delete_media",
+      "_type": "request",
+      "parentId": "fld_memories",
+      "name": "Delete Media",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/memories/{{ item_id }}/media/MEDIA_ID_HERE",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Remove a media item from a memory. Replace MEDIA_ID_HERE."
+    },
+
+    {
+      "_id": "fld_timeline",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Timeline",
+      "description": "Relationship timeline events. Requires Bearer token."
+    },
+    {
+      "_id": "req_timeline_list",
+      "_type": "request",
+      "parentId": "fld_timeline",
+      "name": "List Events",
+      "method": "GET",
+      "url": "{{ base_url }}/api/timeline",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get all timeline events ordered by event date."
+    },
+    {
+      "_id": "req_timeline_create",
+      "_type": "request",
+      "parentId": "fld_timeline",
+      "name": "Create Event",
+      "method": "POST",
+      "url": "{{ base_url }}/api/timeline",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Our First Date\",\n  \"description\": \"Coffee at the little cafe downtown.\",\n  \"eventDate\": \"2023-03-10\",\n  \"location\": \"The Daily Grind Cafe\",\n  \"eventType\": 0,\n  \"photoKeys\": []\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Create a timeline event. eventType: enum TimelineEventType (Custom=0)."
+    },
+    {
+      "_id": "req_timeline_get",
+      "_type": "request",
+      "parentId": "fld_timeline",
+      "name": "Get Event by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/timeline/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a single timeline event."
+    },
+    {
+      "_id": "req_timeline_update",
+      "_type": "request",
+      "parentId": "fld_timeline",
+      "name": "Update Event",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/timeline/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Updated title\",\n  \"description\": \"Updated description\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update a timeline event."
+    },
+    {
+      "_id": "req_timeline_delete",
+      "_type": "request",
+      "parentId": "fld_timeline",
+      "name": "Delete Event",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/timeline/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Delete a timeline event (creator only)."
+    },
+    {
+      "_id": "req_timeline_add_media",
+      "_type": "request",
+      "parentId": "fld_timeline",
+      "name": "Add Photo",
+      "method": "POST",
+      "url": "{{ base_url }}/api/timeline/{{ item_id }}/media",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"photoKey\": \"timeline/event-photo.jpg\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Add a photo key to an existing timeline event."
+    },
+
+    {
+      "_id": "fld_calendar",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Calendar",
+      "description": "Shared calendar events. Requires Bearer token."
+    },
+    {
+      "_id": "req_calendar_list",
+      "_type": "request",
+      "parentId": "fld_calendar",
+      "name": "List Events",
+      "method": "GET",
+      "url": "{{ base_url }}/api/calendar/events?year=2026&month=9",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get calendar events. Optional: year + month query params to filter by month."
+    },
+    {
+      "_id": "req_calendar_create",
+      "_type": "request",
+      "parentId": "fld_calendar",
+      "name": "Create Event",
+      "method": "POST",
+      "url": "{{ base_url }}/api/calendar/events",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Date Night\",\n  \"description\": \"Dinner and a movie\",\n  \"eventDate\": \"2026-09-20\",\n  \"startTime\": \"19:00:00\",\n  \"endTime\": \"22:00:00\",\n  \"location\": \"Downtown\",\n  \"reminderEnabled\": true,\n  \"reminderMinutesBefore\": 60,\n  \"isShared\": true\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Create a calendar event."
+    },
+    {
+      "_id": "req_calendar_get",
+      "_type": "request",
+      "parentId": "fld_calendar",
+      "name": "Get Event by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/calendar/events/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a single calendar event."
+    },
+    {
+      "_id": "req_calendar_update",
+      "_type": "request",
+      "parentId": "fld_calendar",
+      "name": "Update Event",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/calendar/events/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Updated Event Title\",\n  \"reminderEnabled\": false\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update a calendar event (creator only)."
+    },
+    {
+      "_id": "req_calendar_delete",
+      "_type": "request",
+      "parentId": "fld_calendar",
+      "name": "Delete Event",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/calendar/events/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Delete a calendar event (creator only)."
+    },
+    {
+      "_id": "req_calendar_complete",
+      "_type": "request",
+      "parentId": "fld_calendar",
+      "name": "Complete Event",
+      "method": "POST",
+      "url": "{{ base_url }}/api/calendar/events/{{ item_id }}/complete",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Mark a calendar event as completed."
+    },
+
+    {
+      "_id": "fld_important_dates",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Important Dates",
+      "description": "Birthdays, anniversaries, milestones. Requires Bearer token."
+    },
+    {
+      "_id": "req_idates_list",
+      "_type": "request",
+      "parentId": "fld_important_dates",
+      "name": "List Important Dates",
+      "method": "GET",
+      "url": "{{ base_url }}/api/important-dates",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get all important dates for the relationship."
+    },
+    {
+      "_id": "req_idates_create",
+      "_type": "request",
+      "parentId": "fld_important_dates",
+      "name": "Create Important Date",
+      "method": "POST",
+      "url": "{{ base_url }}/api/important-dates",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Partner's Birthday\",\n  \"date\": \"1992-07-22\",\n  \"isRecurring\": true,\n  \"reminderEnabled\": true,\n  \"reminderDaysBefore\": 7,\n  \"notes\": \"They love chocolate cake!\",\n  \"imageKey\": null\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Create an important date."
+    },
+    {
+      "_id": "req_idates_get",
+      "_type": "request",
+      "parentId": "fld_important_dates",
+      "name": "Get Important Date by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/important-dates/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a single important date."
+    },
+    {
+      "_id": "req_idates_update",
+      "_type": "request",
+      "parentId": "fld_important_dates",
+      "name": "Update Important Date",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/important-dates/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"reminderDaysBefore\": 14\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update an important date (creator only)."
+    },
+    {
+      "_id": "req_idates_delete",
+      "_type": "request",
+      "parentId": "fld_important_dates",
+      "name": "Delete Important Date",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/important-dates/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Delete an important date (creator only)."
+    },
+
+    {
+      "_id": "fld_reminders",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Reminders",
+      "description": "Medication, water, food and custom reminders. Requires Bearer token."
+    },
+    {
+      "_id": "req_reminders_list",
+      "_type": "request",
+      "parentId": "fld_reminders",
+      "name": "List Reminders",
+      "method": "GET",
+      "url": "{{ base_url }}/api/reminders",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "List all reminders for the authenticated user."
+    },
+    {
+      "_id": "req_reminders_today",
+      "_type": "request",
+      "parentId": "fld_reminders",
+      "name": "Get Today's Reminders",
+      "method": "GET",
+      "url": "{{ base_url }}/api/reminders/today",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get reminders due today."
+    },
+    {
+      "_id": "req_reminders_create",
+      "_type": "request",
+      "parentId": "fld_reminders",
+      "name": "Create Reminder",
+      "method": "POST",
+      "url": "{{ base_url }}/api/reminders",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Take medication\",\n  \"notes\": \"With food\",\n  \"type\": 0,\n  \"reminderTime\": \"08:00:00\",\n  \"recurrence\": 1,\n  \"oneTimeDate\": null,\n  \"isEnabled\": true\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Create a reminder. type: enum ReminderType. recurrence: None=0, Daily=1, Weekly=2, Monthly=3."
+    },
+    {
+      "_id": "req_reminders_get",
+      "_type": "request",
+      "parentId": "fld_reminders",
+      "name": "Get Reminder by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/reminders/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a single reminder."
+    },
+    {
+      "_id": "req_reminders_update",
+      "_type": "request",
+      "parentId": "fld_reminders",
+      "name": "Update Reminder",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/reminders/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"isEnabled\": false\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update a reminder."
+    },
+    {
+      "_id": "req_reminders_delete",
+      "_type": "request",
+      "parentId": "fld_reminders",
+      "name": "Delete Reminder",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/reminders/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Delete a reminder."
+    },
+    {
+      "_id": "req_reminders_complete",
+      "_type": "request",
+      "parentId": "fld_reminders",
+      "name": "Complete Reminder",
+      "method": "POST",
+      "url": "{{ base_url }}/api/reminders/{{ item_id }}/complete",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Mark a reminder as complete."
+    },
+    {
+      "_id": "req_reminders_skip",
+      "_type": "request",
+      "parentId": "fld_reminders",
+      "name": "Skip Reminder",
+      "method": "POST",
+      "url": "{{ base_url }}/api/reminders/{{ item_id }}/skip",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Skip today's occurrence of a reminder."
+    },
+    {
+      "_id": "req_reminders_snooze",
+      "_type": "request",
+      "parentId": "fld_reminders",
+      "name": "Snooze Reminder",
+      "method": "POST",
+      "url": "{{ base_url }}/api/reminders/{{ item_id }}/snooze",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"snoozeMinutes\": 15\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Snooze a reminder for a number of minutes."
+    },
+
+    {
+      "_id": "fld_bucket_list",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Bucket List",
+      "description": "Shared relationship bucket list. Requires Bearer token."
+    },
+    {
+      "_id": "req_bucket_list",
+      "_type": "request",
+      "parentId": "fld_bucket_list",
+      "name": "List Items",
+      "method": "GET",
+      "url": "{{ base_url }}/api/bucket-list",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "List all bucket list items for the relationship."
+    },
+    {
+      "_id": "req_bucket_create",
+      "_type": "request",
+      "parentId": "fld_bucket_list",
+      "name": "Create Item",
+      "method": "POST",
+      "url": "{{ base_url }}/api/bucket-list",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"See the Northern Lights\",\n  \"description\": \"In Iceland or Norway\",\n  \"location\": \"Iceland\",\n  \"category\": 0,\n  \"targetDate\": \"2027-01-01\",\n  \"notes\": \"Best time is November to February\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Create a bucket list item. category: enum BucketListCategory."
+    },
+    {
+      "_id": "req_bucket_get",
+      "_type": "request",
+      "parentId": "fld_bucket_list",
+      "name": "Get Item by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/bucket-list/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a bucket list item."
+    },
+    {
+      "_id": "req_bucket_update",
+      "_type": "request",
+      "parentId": "fld_bucket_list",
+      "name": "Update Item",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/bucket-list/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"notes\": \"Updated notes\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update a bucket list item."
+    },
+    {
+      "_id": "req_bucket_delete",
+      "_type": "request",
+      "parentId": "fld_bucket_list",
+      "name": "Delete Item",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/bucket-list/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Delete a bucket list item (owner only)."
+    },
+    {
+      "_id": "req_bucket_complete",
+      "_type": "request",
+      "parentId": "fld_bucket_list",
+      "name": "Complete Item",
+      "method": "POST",
+      "url": "{{ base_url }}/api/bucket-list/{{ item_id }}/complete",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Mark a bucket list item as completed."
+    },
+    {
+      "_id": "req_bucket_favorite",
+      "_type": "request",
+      "parentId": "fld_bucket_list",
+      "name": "Toggle Favorite",
+      "method": "POST",
+      "url": "{{ base_url }}/api/bucket-list/{{ item_id }}/favorite",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Toggle favorite on a bucket list item."
+    },
+
+    {
+      "_id": "fld_wishlist",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Wishlist",
+      "description": "Shared relationship wishlist. Requires Bearer token."
+    },
+    {
+      "_id": "req_wishlist_list",
+      "_type": "request",
+      "parentId": "fld_wishlist",
+      "name": "List Items",
+      "method": "GET",
+      "url": "{{ base_url }}/api/wishlist",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "List all wishlist items for the relationship."
+    },
+    {
+      "_id": "req_wishlist_create",
+      "_type": "request",
+      "parentId": "fld_wishlist",
+      "name": "Create Item",
+      "method": "POST",
+      "url": "{{ base_url }}/api/wishlist",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"The Silk Road board game\",\n  \"description\": \"A strategy game we both love\",\n  \"imageKey\": null,\n  \"price\": 49.99,\n  \"url\": \"https://example.com/game\",\n  \"priority\": 1,\n  \"notes\": \"Available on Amazon\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Create a wishlist item. priority: Low=0, Medium=1, High=2."
+    },
+    {
+      "_id": "req_wishlist_get",
+      "_type": "request",
+      "parentId": "fld_wishlist",
+      "name": "Get Item by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/wishlist/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a single wishlist item."
+    },
+    {
+      "_id": "req_wishlist_update",
+      "_type": "request",
+      "parentId": "fld_wishlist",
+      "name": "Update Item",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/wishlist/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"price\": 39.99,\n  \"priority\": 2\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update a wishlist item (owner only)."
+    },
+    {
+      "_id": "req_wishlist_delete",
+      "_type": "request",
+      "parentId": "fld_wishlist",
+      "name": "Delete Item",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/wishlist/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Delete a wishlist item (owner only)."
+    },
+    {
+      "_id": "req_wishlist_complete",
+      "_type": "request",
+      "parentId": "fld_wishlist",
+      "name": "Mark as Purchased",
+      "method": "POST",
+      "url": "{{ base_url }}/api/wishlist/{{ item_id }}/complete",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Mark a wishlist item as purchased."
+    },
+    {
+      "_id": "req_wishlist_favorite",
+      "_type": "request",
+      "parentId": "fld_wishlist",
+      "name": "Favorite Item",
+      "method": "POST",
+      "url": "{{ base_url }}/api/wishlist/{{ item_id }}/favorite",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Mark a wishlist item as favorite."
+    },
+
+    {
+      "_id": "fld_dates",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Date Planner",
+      "description": "Date ideas and planning. Requires Bearer token."
+    },
+    {
+      "_id": "req_dates_list",
+      "_type": "request",
+      "parentId": "fld_dates",
+      "name": "List Date Ideas",
+      "method": "GET",
+      "url": "{{ base_url }}/api/dates",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "List all date ideas. Optional: ?category=0 to filter."
+    },
+    {
+      "_id": "req_dates_categories",
+      "_type": "request",
+      "parentId": "fld_dates",
+      "name": "Get Categories",
+      "method": "GET",
+      "url": "{{ base_url }}/api/dates/categories",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get available date categories."
+    },
+    {
+      "_id": "req_dates_random",
+      "_type": "request",
+      "parentId": "fld_dates",
+      "name": "Get Random Date Idea",
+      "method": "POST",
+      "url": "{{ base_url }}/api/dates/random",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Return a random incomplete date idea from the relationship's list."
+    },
+    {
+      "_id": "req_dates_create",
+      "_type": "request",
+      "parentId": "fld_dates",
+      "name": "Create Date Idea",
+      "method": "POST",
+      "url": "{{ base_url }}/api/dates",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Sunrise hike and picnic\",\n  \"description\": \"Watch the sunrise from the mountain and have breakfast\",\n  \"category\": 0,\n  \"location\": \"Mount Tamalpais\",\n  \"estimatedCost\": 30.00,\n  \"durationMinutes\": 240,\n  \"notes\": \"Need to leave by 5am\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Create a date idea. category: enum DateCategory."
+    },
+    {
+      "_id": "req_dates_get",
+      "_type": "request",
+      "parentId": "fld_dates",
+      "name": "Get Date Idea by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/dates/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a single date idea."
+    },
+    {
+      "_id": "req_dates_update",
+      "_type": "request",
+      "parentId": "fld_dates",
+      "name": "Update Date Idea",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/dates/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"estimatedCost\": 50.00,\n  \"isFavorite\": true\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update a date idea."
+    },
+    {
+      "_id": "req_dates_delete",
+      "_type": "request",
+      "parentId": "fld_dates",
+      "name": "Delete Date Idea",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/dates/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Delete a date idea (creator only)."
+    },
+    {
+      "_id": "req_dates_complete",
+      "_type": "request",
+      "parentId": "fld_dates",
+      "name": "Complete Date Idea",
+      "method": "POST",
+      "url": "{{ base_url }}/api/dates/{{ item_id }}/complete",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Mark a date idea as completed."
+    },
+
+    {
+      "_id": "fld_voice_notes",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Voice Notes",
+      "description": "Voice note metadata (files stored in S3). Requires Bearer token."
+    },
+    {
+      "_id": "req_vn_list",
+      "_type": "request",
+      "parentId": "fld_voice_notes",
+      "name": "List Voice Notes",
+      "method": "GET",
+      "url": "{{ base_url }}/api/voice-notes",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "List all voice notes for the relationship."
+    },
+    {
+      "_id": "req_vn_create",
+      "_type": "request",
+      "parentId": "fld_voice_notes",
+      "name": "Create Voice Note",
+      "method": "POST",
+      "url": "{{ base_url }}/api/voice-notes",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Good morning message\",\n  \"fileKey\": \"voice-notes/abc123.m4a\",\n  \"durationSeconds\": 45,\n  \"category\": 0\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Create a voice note entry after uploading to S3. category: enum VoiceNoteCategory."
+    },
+    {
+      "_id": "req_vn_get",
+      "_type": "request",
+      "parentId": "fld_voice_notes",
+      "name": "Get Voice Note by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/voice-notes/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a single voice note."
+    },
+    {
+      "_id": "req_vn_update",
+      "_type": "request",
+      "parentId": "fld_voice_notes",
+      "name": "Update Voice Note",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/voice-notes/{{ item_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Updated title\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Update title or category of a voice note."
+    },
+    {
+      "_id": "req_vn_delete",
+      "_type": "request",
+      "parentId": "fld_voice_notes",
+      "name": "Delete Voice Note",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/voice-notes/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Soft-delete a voice note."
+    },
+    {
+      "_id": "req_vn_favorite",
+      "_type": "request",
+      "parentId": "fld_voice_notes",
+      "name": "Favorite Voice Note",
+      "method": "POST",
+      "url": "{{ base_url }}/api/voice-notes/{{ item_id }}/favorite",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Mark a voice note as favorite."
+    },
+    {
+      "_id": "req_vn_unfavorite",
+      "_type": "request",
+      "parentId": "fld_voice_notes",
+      "name": "Unfavorite Voice Note",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/voice-notes/{{ item_id }}/favorite",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Remove favorite from a voice note."
+    },
+
+    {
+      "_id": "fld_games",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Distraction Centre (Games)",
+      "description": "Browse games and manage sessions. Requires Bearer token."
+    },
+    {
+      "_id": "req_games_list",
+      "_type": "request",
+      "parentId": "fld_games",
+      "name": "List Games",
+      "method": "GET",
+      "url": "{{ base_url }}/api/games",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "List all available games."
+    },
+    {
+      "_id": "req_games_get",
+      "_type": "request",
+      "parentId": "fld_games",
+      "name": "Get Game by ID",
+      "method": "GET",
+      "url": "{{ base_url }}/api/games/{{ item_id }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get a game by ID."
+    },
+    {
+      "_id": "req_games_start_session",
+      "_type": "request",
+      "parentId": "fld_games",
+      "name": "Start Game Session",
+      "method": "POST",
+      "url": "{{ base_url }}/api/games/{{ item_id }}/sessions",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Start a game session. Set item_id to the game's UUID."
+    },
+    {
+      "_id": "req_games_complete_session",
+      "_type": "request",
+      "parentId": "fld_games",
+      "name": "Complete Game Session",
+      "method": "POST",
+      "url": "{{ base_url }}/api/games/sessions/SESSION_ID_HERE/complete",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"score\": 2048\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Complete a game session and record the score. Replace SESSION_ID_HERE."
+    },
+    {
+      "_id": "req_games_history",
+      "_type": "request",
+      "parentId": "fld_games",
+      "name": "Get Game History",
+      "method": "GET",
+      "url": "{{ base_url }}/api/games/history",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get game session history for the relationship."
+    },
+
+    {
+      "_id": "fld_notifications",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Notifications",
+      "description": "Device registration and in-app notifications. Requires Bearer token."
+    },
+    {
+      "_id": "req_notif_list",
+      "_type": "request",
+      "parentId": "fld_notifications",
+      "name": "Get Notifications",
+      "method": "GET",
+      "url": "{{ base_url }}/api/notifications",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Get all in-app notifications for the authenticated user."
+    },
+    {
+      "_id": "req_notif_read",
+      "_type": "request",
+      "parentId": "fld_notifications",
+      "name": "Mark Notification as Read",
+      "method": "POST",
+      "url": "{{ base_url }}/api/notifications/{{ item_id }}/read",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Mark a notification as read."
+    },
+    {
+      "_id": "req_notif_read_all",
+      "_type": "request",
+      "parentId": "fld_notifications",
+      "name": "Mark All as Read",
+      "method": "POST",
+      "url": "{{ base_url }}/api/notifications/read-all",
+      "body": { "mimeType": "application/json", "text": "" },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Mark all notifications as read."
+    },
+    {
+      "_id": "req_notif_register_device",
+      "_type": "request",
+      "parentId": "fld_notifications",
+      "name": "Register Device",
+      "method": "POST",
+      "url": "{{ base_url }}/api/notifications/devices",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"deviceToken\": \"abc123devicetoken\",\n  \"platform\": 0,\n  \"deviceIdentifier\": \"iPhone-15-Pro\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Register a device for push notifications. platform: enum NotificationPlatform (iOS=0, Android=1)."
+    },
+    {
+      "_id": "req_notif_remove_device",
+      "_type": "request",
+      "parentId": "fld_notifications",
+      "name": "Remove Device",
+      "method": "DELETE",
+      "url": "{{ base_url }}/api/notifications/devices/DEVICE_ID_HERE",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Deregister a device. Replace DEVICE_ID_HERE with the device UUID."
     }
   ]
 }

@@ -1,4 +1,4 @@
-using Amori.Api.Features.Mood;
+using Amori.Api.Features.Mood.DTOs;
 
 namespace Amori.Api.Features.Mood.Services;
 

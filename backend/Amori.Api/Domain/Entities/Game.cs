@@ -11,4 +11,5 @@ public sealed class Game : BaseEntity
 
     // Navigation
     public ICollection<GameSession> Sessions { get; set; } = [];
+    public ICollection<GameScore> Scores { get; set; } = [];
 }
