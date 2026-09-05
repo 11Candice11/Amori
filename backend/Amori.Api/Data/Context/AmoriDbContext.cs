@@ -71,6 +71,10 @@ public sealed class AmoriDbContext(DbContextOptions<AmoriDbContext> options) : D
     public DbSet<DeviceRegistration> DeviceRegistrations => Set<DeviceRegistration>();
     public DbSet<AppNotification> AppNotifications => Set<AppNotification>();
 
+    // Games (Distraction Centre)
+    public DbSet<Game> Games => Set<Game>();
+    public DbSet<GameSession> GameSessions => Set<GameSession>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
