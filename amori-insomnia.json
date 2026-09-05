@@ -1,0 +1,155 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-09-05",
+  "__export_source": "kiro",
+  "resources": [
+    {
+      "_id": "wrk_amori",
+      "_type": "workspace",
+      "name": "Amori API",
+      "description": "Amori .NET API endpoints"
+    },
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "parentId": "wrk_amori",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:5000",
+        "access_token": ""
+      }
+    },
+
+    {
+      "_id": "fld_auth",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Auth",
+      "description": "Register and login — no token required"
+    },
+    {
+      "_id": "req_register",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Register",
+      "method": "POST",
+      "url": "{{ base_url }}/api/auth/register",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane@example.com\",\n  \"password\": \"password123\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "description": "Creates a new user account. Returns accessToken + user object.\n\nRequired fields:\n- name (string)\n- email (string)\n- password (string, min 8 chars)"
+    },
+    {
+      "_id": "req_login",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Login",
+      "method": "POST",
+      "url": "{{ base_url }}/api/auth/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"jane@example.com\",\n  \"password\": \"password123\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "description": "Authenticates an existing user. Returns accessToken + user object.\n\nCopy the accessToken value into the 'access_token' environment variable to use protected endpoints."
+    },
+
+    {
+      "_id": "fld_users",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Users",
+      "description": "Requires Bearer token"
+    },
+    {
+      "_id": "req_get_current_user",
+      "_type": "request",
+      "parentId": "fld_users",
+      "name": "Get Current User",
+      "method": "GET",
+      "url": "{{ base_url }}/api/users/me",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Returns the profile of the currently authenticated user.\n\nReturns: { id, name, email }"
+    },
+
+    {
+      "_id": "fld_relationships",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Relationships",
+      "description": "Requires Bearer token"
+    },
+    {
+      "_id": "req_create_relationship",
+      "_type": "request",
+      "parentId": "fld_relationships",
+      "name": "Create Relationship",
+      "method": "POST",
+      "url": "{{ base_url }}/api/relationships",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"startDate\": \"2024-01-15\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Creates a new relationship for the current user. The user becomes the first member.\n\nRequired fields:\n- startDate (string, ISO 8601 date: YYYY-MM-DD)\n\nReturns: { id, startDate, isActive, members[] }"
+    },
+    {
+      "_id": "req_get_my_relationship",
+      "_type": "request",
+      "parentId": "fld_relationships",
+      "name": "Get My Relationship",
+      "method": "GET",
+      "url": "{{ base_url }}/api/relationships/me",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Returns the relationship the current user belongs to.\n\nReturns: { id, startDate, isActive, members[] }"
+    },
+    {
+      "_id": "req_join_relationship",
+      "_type": "request",
+      "parentId": "fld_relationships",
+      "name": "Join Relationship",
+      "method": "POST",
+      "url": "{{ base_url }}/api/relationships/RELATIONSHIP_ID_HERE/join",
+      "body": {
+        "mimeType": "application/json",
+        "text": ""
+      },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ access_token }}" }
+      ],
+      "description": "Joins an existing relationship by ID. Max 2 members per relationship.\n\nReplace RELATIONSHIP_ID_HERE in the URL with the target relationship's UUID.\n\nReturns: { id, startDate, isActive, members[] }"
+    },
+
+    {
+      "_id": "fld_health",
+      "_type": "request_group",
+      "parentId": "wrk_amori",
+      "name": "Health",
+      "description": "No auth required"
+    },
+    {
+      "_id": "req_health",
+      "_type": "request",
+      "parentId": "fld_health",
+      "name": "Health Check",
+      "method": "GET",
+      "url": "{{ base_url }}/api/healthz",
+      "headers": [],
+      "description": "Returns 200 OK if the API is running."
+    }
+  ]
+}

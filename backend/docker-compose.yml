@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: amori-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: testpass123
+      POSTGRES_DB: amori_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - amori-network
+
+  api:
+    build:
+      context: ./Amori.Api
+      dockerfile: Dockerfile
+    image: amori-api
+    container_name: amori-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5001
+      - Database__ConnectionString=Host=amori-postgres;Port=5432;Database=amori_dev;Username=postgres;Password=testpass123
+    ports:
+      - "5001:5001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - amori-network
+
+volumes:
+  postgres_data:
+
+networks:
+  amori-network:
+    name: amori-network
+    driver: bridge
